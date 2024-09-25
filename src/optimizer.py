@@ -1,5 +1,6 @@
 import time
 from copy import deepcopy
+from tqdm import tqdm
 import numpy as np
 from numpy.linalg import norm
 import pinocchio as pin
@@ -270,18 +271,18 @@ def optim(dc_scene: DiffColScene, wMo_lst_init: List[pin.SE3],
         dc_scene.compute_diffcol_static(X_lst[-1], col_req, diffcol=False)
         draw_scene(vis, vis_meshes, vis_meshes_stat, X, dc_scene.wMs_lst, dc_scene.col_res_pairs, dc_scene.col_res_pairs_stat)
         
-        # input("Continue to animation?")
-        # time.sleep(4)
-        # # Process
-        # print("Animation start!")
-        # for i, Xtmp in enumerate(tqdm(X_lst)):
-        #     if i % 10 != 0:
-        #         continue
-        #     dc_scene.compute_diffcol(Xtmp, col_req, diffcol=False)
-        #     dc_scene.compute_diffcol_static(Xtmp, col_req, diffcol=False)
-        #     draw_scene(vis, vis_meshes, vis_meshes_stat, Xtmp, dc_scene.wMs_lst, dc_scene.col_res_pairs, dc_scene.col_res_pairs_stat)
-        #     time.sleep(0.1)
-        # print("Animation done!")
+        input("Continue to animation?")
+        time.sleep(4)
+        # Process
+        print("Animation start!")
+        for i, Xtmp in enumerate(tqdm(X_lst)):
+            if i % 10 != 0:
+                continue
+            dc_scene.compute_diffcol(Xtmp, col_req, diffcol=False)
+            dc_scene.compute_diffcol_static(Xtmp, col_req, diffcol=False)
+            draw_scene(vis, vis_meshes, vis_meshes_stat, Xtmp, dc_scene.wMs_lst, dc_scene.col_res_pairs, dc_scene.col_res_pairs_stat)
+            time.sleep(0.1)
+        print("Animation done!")
         
 
     return X

@@ -1,7 +1,5 @@
 import time
-from copy import deepcopy
 from tqdm import tqdm
-import sys
 import numpy as np
 import pinocchio as pin
 from pathlib import Path
@@ -363,7 +361,7 @@ if __name__ == "__main__":
         use_floor = floor_file_names[dataset_name]
     
 
-    output_csv_name = (f"TEST/-"
+    output_csv_name = (f"central_difference/"
                        f"{params['g_grad_scale']}-"
                        f"{params['coll_grad_scale']}-"
                        f"{params['learning_rate']}-"

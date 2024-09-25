@@ -214,12 +214,12 @@ class DiffColScene:
         - coll_dist: float
         - grad_1, grad_2: np.ndarray of shape (6,)
         """
-        col_res = hppfcl.DistanceResult()
 
         grad_1 = np.zeros(6)
         grad_2 = np.zeros(6)
         coll_dist = 0
 
+        col_res = hppfcl.DistanceResult()
         d = hppfcl.distance(convex_1, M1, convex_2, M2, col_req, col_res)
         if d >= 0:
             # no collision between convex hulls
@@ -227,8 +227,8 @@ class DiffColScene:
         
         coll_dist = -d
         if diffcol:
-            grad_1 = -distance_derivative(convex_1, M1, convex_2, M2, col_req, col_res)
-            grad_2 = -distance_derivative(convex_2, M2, convex_1, M1, col_req, col_res)
+            grad_1 = -distance_derivative(convex_1, M1, convex_2, M2, col_req)
+            grad_2 = -distance_derivative(convex_2, M2, convex_1, M1, col_req)
     
         return coll_dist, grad_1, grad_2
 
@@ -265,6 +265,7 @@ class DiffColScene:
         # check which parts of decomp_1 are in collision with convex_2
         decomp_1_in_coll = []
         for part_1 in decomp_1:
+            col_res.clear()
             d = hppfcl.distance(part_1, M1, convex_2, M2, col_req, col_res)
             if d < 0:
                 decomp_1_in_coll.append(True)
@@ -274,6 +275,7 @@ class DiffColScene:
         # check which parts of decomp_2 are in collision with convex_1
         decomp_2_in_coll = []
         for part_2 in decomp_2:
+            col_res.clear()
             d = hppfcl.distance(part_2, M2, convex_1, M1, col_req, col_res)
             if d < 0:
                 decomp_2_in_coll.append(True)
@@ -284,12 +286,13 @@ class DiffColScene:
             if decomp_1_in_coll[i]:
                 for j, part_2 in enumerate(decomp_2):
                     if decomp_2_in_coll[j]:
+                        col_res.clear()
                         d = hppfcl.distance(part_1, M1, part_2, M2, col_req, col_res)
                         if d < 0:
                             sum_coll_dist += d
                         if d < 0 and diffcol:
-                            grad_1 += -distance_derivative(part_1, M1, part_2, M2, col_req, col_res)
-                            grad_2 += -distance_derivative(part_2, M2, part_1, M1, col_req, col_res)
+                            grad_1 += -distance_derivative(part_1, M1, part_2, M2, col_req)
+                            grad_2 += -distance_derivative(part_2, M2, part_1, M1, col_req)
 
         sum_coll_dist = -sum_coll_dist
     

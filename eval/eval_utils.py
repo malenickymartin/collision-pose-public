@@ -80,8 +80,8 @@ def get_dist(path_1, path_2, SE3_1, SE3_2, scale_1=1, scale_2=1) -> float:
 
 def get_dist_convex(shape_1, shape_2, M1, M2):
     req = hppfcl.DistanceRequest()
-    res = hppfcl.DistanceResult()
-    d = hppfcl.distance(shape_1, M1, shape_2, M2, req, res)
+    col_res = hppfcl.DistanceResult()
+    d = hppfcl.distance(shape_1, M1, shape_2, M2, req, col_res)
     return d
 
 
@@ -97,12 +97,13 @@ def get_dist_decomp(shape_1, shape_2, M1, M2) -> float:
         min_d: the smallest distance between the two decomposed objects in meters
     """
     req = hppfcl.DistanceRequest()
-    res = hppfcl.DistanceResult()
+    col_res = hppfcl.DistanceResult()
 
     min_dist = np.infty
     for s1 in shape_1:
         for s2 in shape_2:
-            d = hppfcl.distance(s1, M1, s2, M2, req, res)
+            col_res.clear()
+            d = hppfcl.distance(s1, M1, s2, M2, req, col_res)
             min_dist = min(min_dist, d)
 
     return min_dist

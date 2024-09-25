@@ -7,26 +7,33 @@ import copy
 
 def distance_derivative(shape_1: hppfcl.Convex, M1: pin.SE3,
                         shape_2: hppfcl.Convex, M2: pin.SE3,
-                        col_req, col_res, EPS=1e-3) -> np.ndarray:
+                        col_req, EPS=0.005) -> np.ndarray:
     """
     Compute the collision gradient with respect to the object poses X using
-    finite differences.
+    central finite differences.
     Inputs:
         shape_1: first object shape
         M1: first object pose
         shape_2: second object shape
         M2: second object pose
         col_req: collision request
-        col_res: collision result
         EPS: finite difference step
     Returns:
-        gradient of the collision distance with respect to the object pose
+        gradient of the collision distance with respect to the M1 pose
     """
-    d_0 = hppfcl.distance(shape_1, M1, shape_2, M2, col_req, col_res)
+    col_res_plus = hppfcl.DistanceResult()
+    col_res_minus = hppfcl.DistanceResult()
     grad = np.zeros(6)
     for i in range(6):
-        dM = rplus_se3(M1, EPS*np.eye(6)[i])
-        grad[i] = (hppfcl.distance(shape_1, dM, shape_2, M2, col_req, col_res) - d_0)/EPS
+        dM = np.zeros(6)
+        dM[i] = EPS
+        M1_tmp = rplus_se3(M1, dM)
+        col_res_plus.clear()
+        hppfcl.distance(shape_1, M1_tmp, shape_2, M2, col_req, col_res_plus)
+        M1_tmp = rplus_se3(M1, -dM)
+        col_res_minus.clear()
+        hppfcl.distance(shape_1, M1_tmp, shape_2, M2, col_req, col_res_minus)
+        grad[i] = (col_res_plus.min_distance - col_res_minus.min_distance) / (2*EPS)
     return grad
 
 
