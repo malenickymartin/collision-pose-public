@@ -1,4 +1,4 @@
-# collision-pose-pub
+# collision-pose-public
 Object Pose Estimation from Images with Geometrical and Physical Consistency
 
 # Install
