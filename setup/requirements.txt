@@ -1,6 +1,11 @@
-blenderproc
 pin
 numpy
 matplotlib
 trimesh
 coacd
+pillow
+scikit-learn
+tqdm
+scipy
+hpp-fcl
+meshcat
