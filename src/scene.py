@@ -106,7 +106,8 @@ class DiffColScene:
 
     def compute_diffcol(self, wMo_lst: List[pin.SE3], 
                         col_req: hppfcl.DistanceRequest,
-                        coll_exp_scale: int = 0, diffcol: bool = True) -> Tuple[float, np.ndarray]:
+                        coll_exp_scale: int = 0, EPS: Union[bool, float] = 0.001
+                        ) -> Tuple[float, np.ndarray]:
         """
         Compute diffcol for all objects.
 
@@ -114,7 +115,7 @@ class DiffColScene:
         - wMo_lst: list of poses of objects
         - col_req: hppfcl.DistanceRequest
         - coll_exp_scale: int
-        - diffcol: bool
+        - EPS: bool
 
         Returns:
         - cost_c: float
@@ -132,11 +133,11 @@ class DiffColScene:
                 shape1_decomp, shape2_decomp = self.shapes_decomp[i1], self.shapes_decomp[i2]
                 sum_coll_dist, grad_1, grad_2 = self.compute_diffcol_decomp(shape1, shape1_decomp, M1,
                                                                             shape2, shape2_decomp, M2, 
-                                                                            col_req, diffcol)
+                                                                            col_req, EPS)
             else:
                 sum_coll_dist, grad_1, grad_2 = self.compute_diffcol_convex(shape1, M1,
                                                                             shape2, M2,
-                                                                            col_req, diffcol)
+                                                                            col_req, EPS)
                 
             if sum_coll_dist > 0:
                 cost_c[i1] += sum_coll_dist
@@ -151,7 +152,8 @@ class DiffColScene:
 
     def compute_diffcol_static(self, wMo_lst: List[pin.SE3],
                                col_req: hppfcl.DistanceRequest,
-                               coll_exp_scale: int = 0, diffcol=True):
+                               coll_exp_scale: int = 0, EPS: Union[bool, float] = 0.001
+                               ) -> Tuple[float, np.ndarray]:
         """
         Compute diffcol for all objects with static objects.
 
@@ -159,7 +161,7 @@ class DiffColScene:
         - wMo_lst: list of poses of objects
         - col_req: hppfcl.DistanceRequest
         - coll_exp_scale: int
-        - diffcol: bool
+        - EPS: false to disable finite difference, float for finite difference EPS
 
         Returns:
         - cost_c: float
@@ -178,7 +180,7 @@ class DiffColScene:
                 if len(self.shapes_decomp) == 0 and len(self.statics_decomp) == 0: # both shapes and statics are convex
                     sum_coll_dist, grad_1, _ = self.compute_diffcol_convex(shape_convex, wMo,
                                                                            static_convex, wMs,
-                                                                           col_req, diffcol)
+                                                                           col_req, EPS)
                 else:
                     if len(self.shapes_decomp) > 0 and len(self.statics_decomp) > 0: # both shapes and statics are decomposed
                         shape_decomp, static_decomp = self.shapes_decomp[i1], self.statics_decomp[i2]
@@ -187,8 +189,8 @@ class DiffColScene:
                     else: # only statics are decomposed
                         shape_decomp, static_decomp = [self.shapes_convex[i1]], self.statics_decomp[i2]
                     sum_coll_dist, grad_1, _ = self.compute_diffcol_decomp(shape_convex, shape_decomp, wMo,
-                                                    static_convex, static_decomp, wMs, 
-                                                    col_req, diffcol)
+                                                                           static_convex, static_decomp, wMs, 
+                                                                           col_req, EPS)
                     
                 if sum_coll_dist > 0: # if there is a collision between object and static object
                     cost_c[i1] += sum_coll_dist
@@ -199,7 +201,7 @@ class DiffColScene:
     
     def compute_diffcol_convex(
             self, convex_1: hppfcl.Convex, M1: pin.SE3, convex_2: hppfcl.Convex, M2: pin.SE3,
-            col_req: hppfcl.DistanceRequest, diffcol=True
+            col_req: hppfcl.DistanceRequest, EPS: Union[bool, float] = 0.001
             ) -> Tuple[float, np.ndarray, np.ndarray]:
         """
         Compute diffcol using only convex hulls.
@@ -208,7 +210,7 @@ class DiffColScene:
         - convex_1, convex_2: hppfcl.Convex
         - M1, M2: pin.SE3
         - col_req: hppfcl.DistanceRequest
-        - diffcol: bool
+        - EPS: false to disable finite difference, float for finite difference EPS
 
         Returns:
         - coll_dist: float
@@ -226,16 +228,16 @@ class DiffColScene:
             return coll_dist, grad_1, grad_2
         
         coll_dist = -d
-        if diffcol:
-            grad_1 = -distance_derivative(convex_1, M1, convex_2, M2, col_req)
-            grad_2 = -distance_derivative(convex_2, M2, convex_1, M1, col_req)
+        if EPS > 0:
+            grad_1 = -distance_derivative(convex_1, M1, convex_2, M2, col_req, EPS)
+            grad_2 = -distance_derivative(convex_2, M2, convex_1, M1, col_req, EPS)
     
         return coll_dist, grad_1, grad_2
 
     def compute_diffcol_decomp(
             self, convex_1: hppfcl.Convex, decomp_1: List[hppfcl.Convex], M1: pin.SE3,
             convex_2: hppfcl.Convex, decomp_2: List[hppfcl.Convex], M2: List[pin.SE3],
-            col_req: hppfcl.DistanceRequest, diffcol: bool = True
+            col_req: hppfcl.DistanceRequest, EPS: Union[bool, float] = 0.001
             ) -> Tuple[float, np.ndarray, np.ndarray]:
         """
         Compute diffcol using both convex hulls and convex decomposed shapes.
@@ -245,7 +247,7 @@ class DiffColScene:
         - decomp_1, decomp_2: list of hppfcl.Convex
         - M1, M2: pin.SE3
         - col_req: hppfcl.DistanceRequest
-        - diffcol: bool
+        - EPS: false to disable finite difference, float for finite difference EPS
 
         Returns:
         - sum_coll_dist: float
@@ -290,9 +292,9 @@ class DiffColScene:
                         d = hppfcl.distance(part_1, M1, part_2, M2, col_req, col_res)
                         if d < 0:
                             sum_coll_dist += d
-                        if d < 0 and diffcol:
-                            grad_1 += -distance_derivative(part_1, M1, part_2, M2, col_req)
-                            grad_2 += -distance_derivative(part_2, M2, part_1, M1, col_req)
+                        if d < 0 and EPS > 0:
+                            grad_1 += -distance_derivative(part_1, M1, part_2, M2, col_req, EPS)
+                            grad_2 += -distance_derivative(part_2, M2, part_1, M1, col_req, EPS)
 
         sum_coll_dist = -sum_coll_dist
     

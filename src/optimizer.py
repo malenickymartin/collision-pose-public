@@ -42,7 +42,8 @@ def three_phase_optim(dc_scene: DiffColScene, wMo_lst_init: List[pin.SE3],
             "step_lr_freq": 1000,
             "std_xy_z_theta": [0.05, 0.49, 0.26],
             "method": "GD",
-            "method_params": None
+            "method_params": None,
+            "EPS": 1e-6
         }
     ces = params["coll_exp_scale"]
     ggs = params["g_grad_scale"]
@@ -99,13 +100,14 @@ def optim(dc_scene: DiffColScene, wMo_lst_init: List[pin.SE3],
             "step_lr_freq": 1000,
             "std_xy_z_theta": [0.05, 0.49, 0.26],
             "method": "GD",
-            "method_params": None
+            "method_params": None,
+            "EPS": 1e-6
         }
 
     # Check if optimization is needed
     if not params["g_grad_scale"]:
-        cost_c_obj, _ = dc_scene.compute_diffcol(wMo_lst_init, col_req, diffcol=False)
-        cost_c_stat, _ = dc_scene.compute_diffcol_static(wMo_lst_init, col_req, diffcol=False)
+        cost_c_obj, _ = dc_scene.compute_diffcol(wMo_lst_init, col_req, EPS=False)
+        cost_c_stat, _ = dc_scene.compute_diffcol_static(wMo_lst_init, col_req, EPS=False)
         if np.sum(cost_c_obj) + np.sum(cost_c_stat) < 1e-3:
             print("No collision detected, no need to optimize")
             return wMo_lst_init
@@ -132,10 +134,7 @@ def optim(dc_scene: DiffColScene, wMo_lst_init: List[pin.SE3],
     lr_decay = params["step_lr_decay"]
     lr_freq = params["step_lr_freq"]
     method = params["method"]
-
-    diffcol_flag = True
-    if coll_grad_scale == 0:
-        diffcol_flag = False
+    EPS = params["EPS"]
 
     # Momentum param MGD, NGD
     if method in ['MGD', 'NGD']:
@@ -173,11 +172,11 @@ def optim(dc_scene: DiffColScene, wMo_lst_init: List[pin.SE3],
             X_eval = X
 
         # Compute obj-obj collision gradients
-        cost_c_obj, grad_c_obj = dc_scene.compute_diffcol(X_eval, col_req, coll_exp_scale, diffcol=diffcol_flag)
+        cost_c_obj, grad_c_obj = dc_scene.compute_diffcol(X_eval, col_req, coll_exp_scale, EPS)
 
         # Compute obj-static collision gradients
         if len(dc_scene.statics_convex) > 0:
-            cost_c_stat, grad_c_stat = dc_scene.compute_diffcol_static(X_eval, col_req, coll_exp_scale, diffcol=diffcol_flag)
+            cost_c_stat, grad_c_stat = dc_scene.compute_diffcol_static(X_eval, col_req, coll_exp_scale, EPS)
         else:
             cost_c_stat, grad_c_stat = 0, np.zeros(6*N_SHAPES)
 
@@ -257,18 +256,14 @@ def optim(dc_scene: DiffColScene, wMo_lst_init: List[pin.SE3],
         vis = meshcat.Visualizer(zmq_url="tcp://127.0.0.1:6000")
         vis.delete()
         print('Init!')
-        # for j in range(N_SHAPES):
-        #     show_cov_ellipsoid(vis, wMo_lst_init[j].translation, Q_lst[j][:3,:3], ellipsoid_id=j, nstd=3)
         dc_scene.compute_diffcol(wMo_lst_init, col_req)
-        dc_scene.compute_diffcol_static(wMo_lst_init, col_req, diffcol=False)
+        dc_scene.compute_diffcol_static(wMo_lst_init, col_req, EPS=False)
         draw_scene(vis, vis_meshes, vis_meshes_stat, wMo_lst_init, dc_scene.wMs_lst, dc_scene.col_res_pairs, dc_scene.col_res_pairs_stat)
         input("Continue to optimized pose?")
         time.sleep(2)
         print('optimized!')
-        # for j in range(N_SHAPES):
-        #     show_cov_ellipsoid(vis, X[j].translation, Q_lst[j][:3,:3], ellipsoid_id=j, nstd=3)
-        dc_scene.compute_diffcol(X_lst[-1], col_req, diffcol=False)
-        dc_scene.compute_diffcol_static(X_lst[-1], col_req, diffcol=False)
+        dc_scene.compute_diffcol(X_lst[-1], col_req, EPS=False)
+        dc_scene.compute_diffcol_static(X_lst[-1], col_req, EPS=False)
         draw_scene(vis, vis_meshes, vis_meshes_stat, X, dc_scene.wMs_lst, dc_scene.col_res_pairs, dc_scene.col_res_pairs_stat)
         
         input("Continue to animation?")
@@ -278,8 +273,8 @@ def optim(dc_scene: DiffColScene, wMo_lst_init: List[pin.SE3],
         for i, Xtmp in enumerate(tqdm(X_lst)):
             if i % 10 != 0:
                 continue
-            dc_scene.compute_diffcol(Xtmp, col_req, diffcol=False)
-            dc_scene.compute_diffcol_static(Xtmp, col_req, diffcol=False)
+            dc_scene.compute_diffcol(Xtmp, col_req, EPS=False)
+            dc_scene.compute_diffcol_static(Xtmp, col_req, EPS=False)
             draw_scene(vis, vis_meshes, vis_meshes_stat, Xtmp, dc_scene.wMs_lst, dc_scene.col_res_pairs, dc_scene.col_res_pairs_stat)
             time.sleep(0.1)
         print("Animation done!")
